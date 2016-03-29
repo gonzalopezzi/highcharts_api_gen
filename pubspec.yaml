@@ -1,0 +1,5 @@
+name: highcharts_api_gen
+version: 0.0.1
+description: A simple console application.
+dependencies:
+  http: any
