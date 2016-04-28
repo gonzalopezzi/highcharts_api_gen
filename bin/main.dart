@@ -3,8 +3,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:core';
 
-String baseURL = "http://api.highcharts.com/option/highcharts/child/";
-String baseMethodsURL = "http://api.highcharts.com/object/highcharts-obj/child/";
+final String baseURL = "http://api.highcharts.com/option/highcharts/child/";
+final String baseMethodsURL = "http://api.highcharts.com/object/highcharts-obj/child/";
+
+final Map<String, String> propertyTypesDirtyFixes = {
+  "PlotOptionsSeries.pointStart": "dynamic"
+};
 
 main(List<String> args) async {
   List<String> topLevelClasses = ["chart", "credits", "data", "drilldown", "exporting", "labels", "legend",
@@ -28,15 +32,11 @@ main(List<String> args) async {
   api.writeln("import 'package:js/js.dart';");
   api.writeln("import 'dart:html';");
   api.writeln("");
-/*
-  @JS("Date.UTC")
-external DateTime dateUTC (year, month, day);
-   */
   api.writeln("@JS('Date.UTC')");
   api.writeln("external DateTime dateUTC (year, month, day);");
   api.writeln("");
   api.writeln("@JS('Highcharts.Chart')");
-  api.writeln("class HighchartsChart extends OptionsObject with Chart {");
+  api.writeln("class HighchartsChart {");
   api.writeln("  external HighchartsChart (ChartOptions options);");
   api.writeln("  external List<Series> get series;");
   api.writeln("  external List<Axis> get axes;");
@@ -51,12 +51,12 @@ external DateTime dateUTC (year, month, day);
   api.writeln("");
   api.writeln("@JS()");
   api.writeln("@anonymous");
-  api.writeln("class Axis extends OptionsObject {");
+  api.writeln("class Axis {");
   api.writeln("}");
   api.writeln("");
   api.writeln("@JS()");
   api.writeln("@anonymous");
-  api.writeln("class ChartOptions extends OptionsObject {");
+  api.writeln("class ChartOptions {");
   api.writeln("  external factory ChartOptions ();");
   api.writeln("  ");
   api.writeln("  external Chart get chart;");
@@ -237,7 +237,7 @@ Future<String> generateApi (String child) async {
       sb.writeln("class $className extends PlotOptions {");
     }
     else {
-      sb.writeln("class $className extends OptionsObject {");
+      sb.writeln("class $className {");
     }
     sb.writeln("  external factory $className ();");
 
@@ -249,6 +249,12 @@ Future<String> generateApi (String child) async {
           .split("\.")
           .length - 1];
       String type = getType(propertyApi['returnType'], propertyApi['name'], propertyApi['isParent']);
+
+      // Wait, let's check out dirty type fixes for this property:
+      if (propertyTypesDirtyFixes["$className.$propName"]!=null) {
+        type = propertyTypesDirtyFixes["$className.$propName"];
+      }
+
       if (propName != "") {
         sb.writeln("  /** \n   * ${propertyApi['description']} \n   */");
         if (propertyApi['deprecated'] != null && propertyApi['deprecated'])
