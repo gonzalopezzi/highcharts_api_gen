@@ -166,7 +166,7 @@ String getType (String jsReturnType, String propertyName, bool isParent) {
         out = "List<num>";
         break;
       case "Array<Object>":
-        out = "List<JsObject>";
+        out = "List<dynamic>";
         break;
       case "Array<Color>":
         out = "List<String>";
@@ -175,7 +175,7 @@ String getType (String jsReturnType, String propertyName, bool isParent) {
         out = "List";
         break;
       case "Object":
-        out = "JsObject";
+        out = "dynamic";
         break;
     }
   }
