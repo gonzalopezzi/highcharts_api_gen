@@ -52,6 +52,15 @@ main(List<String> args) async {
   api.writeln("@JS()");
   api.writeln("@anonymous");
   api.writeln("class Axis {");
+  api.write('''
+  external factory Axis();
+  external dynamic addPlotBand(dynamic options);
+  external dynamic addPlotLine(dynamic options);
+  external void removePlotBand(String id);
+  external void removePlotLine(String id);
+  external num toPixels(num value, [bool paneCoordinates]);
+  external num toValue(num pixel, [bool paneCoordinates]);
+  ''');
   api.writeln("}");
   api.writeln("");
   api.writeln("@JS()");
