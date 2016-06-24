@@ -35,12 +35,9 @@ main(List<String> args) async {
   api.writeln("@JS('Date.UTC')");
   api.writeln("external DateTime dateUTC (year, month, day);");
   api.writeln("");
-  api.writeln("@JS('Highcharts.Chart')");
-  api.writeln("class HighchartsChart {");
-  api.writeln("  external HighchartsChart (ChartOptions options);");
-  api.writeln("  external List<Series> get series;");
-  api.writeln("  external List<Axis> get axes;");
-  api.writeln("}");
+
+  api.write(await generateHighchartsChartApi());
+
   api.writeln("");
   api.writeln("@JS()");
   api.writeln("@anonymous");
@@ -127,6 +124,36 @@ main(List<String> args) async {
   api.writeln("  ");
   api.writeln("}");
   api.writeln("");
+  api.writeln("@JS()");
+  api.writeln("@anonymous");
+  api.writeln("class DateTimeLabelFormats {");
+  api.writeln("  external factory DateTimeLabelFormats();");
+  api.writeln("  external String get millisecond;");
+  api.writeln("  external void set millisecond(String a_milliseconds);");
+  api.writeln("  ");
+  api.writeln("  external String get second;");
+  api.writeln("  external void set second(String a_seconds);");
+  api.writeln("  ");
+  api.writeln("  external String get minute;");
+  api.writeln("  external void set minute(String a_minute);");
+  api.writeln("  ");
+  api.writeln("  external String get hour;");
+  api.writeln("  external void set hour(String a_hour);");
+  api.writeln("  ");
+  api.writeln("  external String get day;");
+  api.writeln("  external void set day(String a_day);");
+  api.writeln("  ");
+  api.writeln("  external String get week;");
+  api.writeln("  external void set week(String a_week);");
+  api.writeln("  ");
+  api.writeln("  external String get month;");
+  api.writeln("  external void set month(String a_month);");
+  api.writeln("  ");
+  api.writeln("  external String get year;");
+  api.writeln("  external void set year(String a_year);");
+  api.writeln("}");
+  api.writeln("");
+
 
   await Future.forEach(topLevelClasses, (String topLevelClass) async {
     api.write(await generateApi(topLevelClass));
@@ -224,6 +251,118 @@ bool isAxisClass (String className) {
   return className.toLowerCase == "xaxis" || className.toLowerCase() == "yaxis";
 }
 
+List<String> generatePropertiesAndReturnPropNames (StringBuffer sb, List apiJson,
+                                              String className, List<String> parents) {
+  List<String> propNames = [];
+
+  apiJson.forEach((Map propertyApi) {
+    String propName = propertyApi['fullname'].split(
+        "\.")[propertyApi['fullname']
+        .split("\.")
+        .length - 1];
+    String type = getType(propertyApi['returnType'], propertyApi['name'], propertyApi['isParent']);
+
+    // Wait, let's check out dirty type fixes for this property:
+    if (propertyTypesDirtyFixes["$className.$propName"]!=null) {
+      type = propertyTypesDirtyFixes["$className.$propName"];
+    }
+
+    if (propName != "") {
+      sb.writeln("  /** \n   * ${propertyApi['description']} \n   */");
+      if (propertyApi['deprecated'] != null && propertyApi['deprecated'])
+        sb.writeln("  @deprecated");
+      sb.writeln("  external $type get $propName;");
+      if (propertyApi['deprecated'] != null && propertyApi['deprecated'])
+        sb.writeln("  @deprecated");
+      sb.writeln("  external void set $propName ($type a_$propName);");
+      if (propertyApi['isParent']) {
+        parents.add(propertyApi['name']);
+      }
+      propNames.add(propName);
+    }
+  });
+  return propNames;
+}
+
+void generateMethods (StringBuffer sb, List apiMethodsJson, String className, List<String> propNames, List<String> parents) {
+  apiMethodsJson.forEach((Map methodApi) {
+    if (methodApi['type']=="method") {
+      List<String> methodNameSplitted = methodApi['fullname'].split(r".");
+      String methodName = methodNameSplitted[methodNameSplitted.length - 1];
+      var alreadyInProperties = propNames.contains(methodName);
+      if (!alreadyInProperties) {
+        List<String> paramsSplitted = [];
+        if (methodApi['params'] != null) {
+          paramsSplitted = (methodApi['params'] as String)
+              .replaceAll(r"(", "")
+              .replaceAll(r")", "")
+              .replaceAll(r"[", "")
+              .replaceAll(r"]", "")
+              .split(",");
+        }
+        String convertedParams = "";
+        bool first = true;
+        paramsSplitted.forEach((String param) {
+          List<String> splitted = param.trim().split(" ");
+          if (splitted != null && splitted.length == 2) {
+            String type = splitted[0];
+            String name = splitted[1].replaceAll(r"|", "_or_");
+            String convertedType = getMethodReturnType(type, "", false);
+            convertedParams = convertedParams +
+                "${first ? '' : ','} ${convertedType} ${name}";
+            first = false;
+          }
+          else {
+            /* REMOVED THIS WARNING. NOT NEEDED ANYMORE: print(
+                "Warning: param \"$param\" has not been processed when parsing methods for $child"); */
+          }
+        });
+        String convertedReturnType = methodApi['returnType'] == null ||
+            methodApi['returnType'] == '' ? "void" : getMethodReturnType(
+            methodApi['returnType'], "", false);
+        sb.writeln("  /** ");
+        sb.writeln("  * ${methodApi['paramsDescription']}");
+        sb.writeln("  */");
+        sb.writeln(
+
+            "  external $convertedReturnType $methodName ($convertedParams);");
+      }
+    }
+  });
+}
+
+Future<String> generateHighchartsChartApi () async {
+  String child = "chart";
+  List apiJson = await getApiJson(child);
+  List apiMethodsJson = await getApiMethodsJson (child);
+  List<String> parents = [];
+  StringBuffer sb = new StringBuffer();
+
+  if (apiJson != null) {
+    sb.writeln("@JS('Highcharts.Chart')");
+    sb.writeln("class HighchartsChart {");
+    String className = "HighchartsChart";
+
+    sb.writeln("  external HighchartsChart (ChartOptions options);");
+
+    sb.writeln("  external List<Series> get series;");
+    sb.writeln("  external List<Axis> get axes;");
+
+    List<String> propNames = generatePropertiesAndReturnPropNames(sb, apiJson, className, parents);
+    generateMethods(sb, apiMethodsJson, className, propNames, parents);
+
+    sb.writeln("}");
+
+    /* NO ES NECESARIO GENERAR TODAS LAS CLASES HIJAS PORQUE YA LO VA A HACER LA CLASE chart QUE ESTÁ COMO TOP LEVEL CLASS
+    await Future.forEach(parents, (String property) async {
+      sb.write(await generateApi(property));
+    });
+    */
+  }
+
+  return sb.toString();
+}
+
 Future<String> generateApi (String child) async {
   List apiJson = await getApiJson(child);
   List apiMethodsJson = await getApiMethodsJson (child);
@@ -250,80 +389,8 @@ Future<String> generateApi (String child) async {
     }
     sb.writeln("  external factory $className ();");
 
-    List<String> propNames = [];
-
-    apiJson.forEach((Map propertyApi) {
-      String propName = propertyApi['fullname'].split(
-          "\.")[propertyApi['fullname']
-          .split("\.")
-          .length - 1];
-      String type = getType(propertyApi['returnType'], propertyApi['name'], propertyApi['isParent']);
-
-      // Wait, let's check out dirty type fixes for this property:
-      if (propertyTypesDirtyFixes["$className.$propName"]!=null) {
-        type = propertyTypesDirtyFixes["$className.$propName"];
-      }
-
-      if (propName != "") {
-        sb.writeln("  /** \n   * ${propertyApi['description']} \n   */");
-        if (propertyApi['deprecated'] != null && propertyApi['deprecated'])
-          sb.writeln("  @deprecated");
-        sb.writeln("  external $type get $propName;");
-        if (propertyApi['deprecated'] != null && propertyApi['deprecated'])
-          sb.writeln("  @deprecated");
-        sb.writeln("  external void set $propName ($type a_$propName);");
-        if (propertyApi['isParent']) {
-          parents.add(propertyApi['name']);
-        }
-        propNames.add(propName);
-      }
-    });
-
-    // Now lets start with the methods:
-    apiMethodsJson.forEach((Map methodApi) {
-      if (methodApi['type']=="method") {
-        List<String> methodNameSplitted = methodApi['fullname'].split(r".");
-        String methodName = methodNameSplitted[methodNameSplitted.length - 1];
-        var alreadyInProperties = propNames.contains(methodName);
-        if (!alreadyInProperties) {
-          List<String> paramsSplitted = [];
-          if (methodApi['params'] != null) {
-            paramsSplitted = (methodApi['params'] as String)
-                .replaceAll(r"(", "")
-                .replaceAll(r")", "")
-                .replaceAll(r"[", "")
-                .replaceAll(r"]", "")
-                .split(",");
-          }
-          String convertedParams = "";
-          bool first = true;
-          paramsSplitted.forEach((String param) {
-            List<String> splitted = param.trim().split(" ");
-            if (splitted != null && splitted.length == 2) {
-              String type = splitted[0];
-              String name = splitted[1].replaceAll(r"|", "_or_");
-              String convertedType = getMethodReturnType(type, "", false);
-              convertedParams = convertedParams +
-                  "${first ? '' : ','} ${convertedType} ${name}";
-              first = false;
-            }
-            else {
-              print(
-                  "Warning: param \"$param\" has not been processed when parsing methods for $child");
-            }
-          });
-          String convertedReturnType = methodApi['returnType'] == null ||
-              methodApi['returnType'] == '' ? "void" : getMethodReturnType(
-              methodApi['returnType'], "", false);
-          sb.writeln("  /** ");
-          sb.writeln("  * ${methodApi['paramsDescription']}");
-          sb.writeln("  */");
-          sb.writeln(
-
-              "  external $convertedReturnType $methodName ($convertedParams);");
-        }
-      }
-    });
+    List<String> propNames = generatePropertiesAndReturnPropNames(sb, apiJson, className, parents);
+    generateMethods(sb, apiMethodsJson, className, propNames, parents);
 
     sb.writeln("}");
 
