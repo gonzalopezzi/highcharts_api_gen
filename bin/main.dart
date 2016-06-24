@@ -38,14 +38,6 @@ main(List<String> args) async {
 
   api.write(await generateHighchartsChartApi());
 
-  /*
-  api.writeln("@JS('Highcharts.Chart')");
-  api.writeln("class HighchartsChart {");
-  api.writeln("  external HighchartsChart (ChartOptions options);");
-  api.writeln("  external List<Series> get series;");
-  api.writeln("  external List<Axis> get axes;");
-  api.writeln("}");
-  */
   api.writeln("");
   api.writeln("@JS()");
   api.writeln("@anonymous");
@@ -123,6 +115,36 @@ main(List<String> args) async {
   api.writeln("  ");
   api.writeln("}");
   api.writeln("");
+  api.writeln("@JS()");
+  api.writeln("@anonymous");
+  api.writeln("class DateTimeLabelFormats {");
+  api.writeln("  external factory DateTimeLabelFormats();");
+  api.writeln("  external String get millisecond;");
+  api.writeln("  external void set millisecond(String a_milliseconds);");
+  api.writeln("  ");
+  api.writeln("  external String get second;");
+  api.writeln("  external void set second(String a_seconds);");
+  api.writeln("  ");
+  api.writeln("  external String get minute;");
+  api.writeln("  external void set minute(String a_minute);");
+  api.writeln("  ");
+  api.writeln("  external String get hour;");
+  api.writeln("  external void set hour(String a_hour);");
+  api.writeln("  ");
+  api.writeln("  external String get day;");
+  api.writeln("  external void set day(String a_day);");
+  api.writeln("  ");
+  api.writeln("  external String get week;");
+  api.writeln("  external void set week(String a_week);");
+  api.writeln("  ");
+  api.writeln("  external String get month;");
+  api.writeln("  external void set month(String a_month);");
+  api.writeln("  ");
+  api.writeln("  external String get year;");
+  api.writeln("  external void set year(String a_year);");
+  api.writeln("}");
+  api.writeln("");
+
 
   await Future.forEach(topLevelClasses, (String topLevelClass) async {
     api.write(await generateApi(topLevelClass));
