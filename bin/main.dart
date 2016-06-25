@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:core';
+import 'dart:io';
+import 'package:args/args.dart';
 
 final String baseURL = "http://api.highcharts.com/option/highcharts/child/";
 final String baseMethodsURL = "http://api.highcharts.com/object/highcharts-obj/child/";
@@ -11,6 +13,25 @@ final Map<String, String> propertyTypesDirtyFixes = {
 };
 
 main(List<String> args) async {
+
+  var parser = new ArgParser ();
+  parser.addOption('output', abbr: 'o', help:'Output directory to store generated files');
+  parser.addFlag('help', abbr:'h', help:'Show this help');
+
+  var parsedArguments = parser.parse(args);
+
+  if (parsedArguments['help']) {
+    print(parser.usage);
+    return;
+  }
+  if (parsedArguments['output'] == null) {
+    print ("Output folder must be specified");
+    print(parser.usage);
+    return;
+  }
+
+  var outputDirectory = parsedArguments['output'];
+
   List<String> topLevelClasses = ["chart", "credits", "data", "drilldown", "exporting", "labels", "legend",
                                   "loading", "navigation", "noData", "pane", "plotOptions", "series",
                                   "series<area>", "series<arearange>", "series<areaspline>",
@@ -25,20 +46,26 @@ main(List<String> args) async {
 
   StringBuffer api = new StringBuffer();
 
-  api.writeln("library highcharts.options;");
-  api.writeln("");
-  api.writeln("import 'package:uuid/uuid.dart';");
-  api.writeln("import 'dart:js';");
-  api.writeln("import 'package:js/js.dart';");
-  api.writeln("import 'dart:html';");
-  api.writeln("");
-  api.writeln("@JS('Date.UTC')");
-  api.writeln("external DateTime dateUTC (year, month, day);");
+  File libraryAndImportsTemplate = new File("bin/templates/library_and_imports.txt");
+  api.write(libraryAndImportsTemplate.readAsStringSync());
   api.writeln("");
 
-  api.write(await generateHighchartsChartApi());
+  // Creation of the "src" directory where all the dart files will be stored
+  new Directory("$outputDirectory/src/").createSync();
+
+  await Future.forEach(topLevelClasses, (String topLevelClass) async {
+    var sb = new StringBuffer();
+    sb.writeln("part of highcharts;");
+    sb.writeln("");
+    sb.write(await generateApi(topLevelClass));
+    var fileName = camelCaseToLowerCaseUnderscore(dashesToCamelCase(topLevelClass));
+    api.writeln ("part 'src/${fileName}.dart';");
+    File file = new File ('$outputDirectory/src/$fileName.dart');
+    file.writeAsStringSync(sb.toString());
+  });
 
   api.writeln("");
+<<<<<<< HEAD
   api.writeln("@JS()");
   api.writeln("@anonymous");
   api.writeln("class OptionsObject {");
@@ -153,13 +180,17 @@ main(List<String> args) async {
   api.writeln("  external void set year(String a_year);");
   api.writeln("}");
   api.writeln("");
+=======
+  api.write(await generateHighchartsChartApi());
+>>>>>>> release/0.5.1
 
+  api.writeln("");
+  File hardcodedClassesTemplate = new File("bin/templates/hardcoded_classes.txt");
+  api.write(hardcodedClassesTemplate.readAsStringSync());
 
-  await Future.forEach(topLevelClasses, (String topLevelClass) async {
-    api.write(await generateApi(topLevelClass));
-  });
+  File file = new File('$outputDirectory/highcharts.dart');
+  file.writeAsStringSync(api.toString());
 
-  print(api.toString());
 }
 
 String getMethodReturnType (String jsReturnType, String propertyName, bool isParent) {
@@ -240,6 +271,14 @@ String dashesToCamelCase (String dashes) {
     out = out + startUpperCase(formattedDash);
   });
   return out;
+}
+
+String camelCaseToLowerCaseUnderscore (String camel) {
+  var regex = new RegExp("([a-z])([A-Z]+)");
+  String out = camel.replaceAllMapped(regex, (Match match) {
+    return "${match.group(1)}_${match.group(2)}";
+  });
+  return out.toLowerCase();
 }
 
 bool isSeriesClass (String className) {

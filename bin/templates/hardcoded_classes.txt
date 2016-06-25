@@ -1,0 +1,109 @@
+
+@JS('Date.UTC')
+external DateTime dateUTC (year, month, day);
+
+@JS()
+@anonymous
+class OptionsObject {
+  static Uuid uidGen = new Uuid();
+  JsObject jsChart;
+}
+
+@JS()
+@anonymous
+class Axis {
+}
+
+@JS()
+@anonymous
+class ChartOptions {
+  external factory ChartOptions ();
+
+  external Chart get chart;
+  external void set chart (Chart a_chart);
+
+  external List<String> get colors;
+  external void set colors (List<String> a_colors);
+
+  external Credits get credits;
+  external void set credits (Credits a_credits);
+
+  external Data get data;
+  external void set data (Data a_data);
+
+  external Drilldown get drilldown;
+  external void set drilldown (Drilldown a_drilldown);
+
+  external Exporting get exporting;
+  external void set exporting (Exporting a_exporting);
+
+  external Labels get labels;
+  external void set labels (Labels a_labels);
+
+  external Legend get legend;
+  external void set legend (Legend a_legend);
+
+  external Loading get loading;
+  external void set loading (Loading a_loading);
+
+  external Navigation get navigation;
+  external void set navigation (Navigation a_navigation);
+
+  external NoData get noData;
+  external void set noData (NoData a_noData);
+
+  external Pane get pane;
+  external void set pane (Pane a_pane);
+
+  external PlotOptions get plotOptions;
+  external void set plotOptions (PlotOptions a_plotOptions);
+
+  external List<Series> get series;
+  external void set series (List<Series> a_series);
+
+  external Subtitle get subtitle;
+  external void set subtitle (Subtitle a_subtitle);
+
+  external Title get title;
+  external void set title (Title a_title);
+
+  external Tooltip get tooltip;
+  external void set tooltip (Tooltip a_tooltip);
+
+  external XAxis get xAxis;
+  external void set xAxis (XAxis a_xAxis);
+
+  external YAxis get yAxis;
+  external void set yAxis (YAxis a_yAxis);
+
+}
+
+@JS()
+@anonymous
+class DateTimeLabelFormats {
+  external factory DateTimeLabelFormats();
+  external String get millisecond;
+  external void set millisecond(String a_milliseconds);
+
+  external String get second;
+  external void set second(String a_seconds);
+
+  external String get minute;
+  external void set minute(String a_minute);
+
+  external String get hour;
+  external void set hour(String a_hour);
+
+  external String get day;
+  external void set day(String a_day);
+
+  external String get week;
+  external void set week(String a_week);
+
+  external String get month;
+  external void set month(String a_month);
+
+  external String get year;
+  external void set year(String a_year);
+}
+
