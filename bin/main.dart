@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:core';
+import 'dart:io';
 
 final String baseURL = "http://api.highcharts.com/option/highcharts/child/";
 final String baseMethodsURL = "http://api.highcharts.com/object/highcharts-obj/child/";
@@ -24,13 +25,31 @@ main(List<String> args) async {
                                   "title", "tooltip", "xAxis", "yAxis"];
 
   StringBuffer api = new StringBuffer();
+  var classesCode = new Map<String, String> ();
 
-  api.writeln("library highcharts.options;");
+  api.writeln("library highcharts;");
   api.writeln("");
   api.writeln("import 'package:uuid/uuid.dart';");
   api.writeln("import 'dart:js';");
   api.writeln("import 'package:js/js.dart';");
   api.writeln("import 'dart:html';");
+  api.writeln("");
+
+  // Creation of the "src" directory where all the dart files will be stored
+  new Directory("C:/Gonzalo/trabajos/dart/highcharts_api_gen_output/src/").createSync();
+
+  await Future.forEach(topLevelClasses, (String topLevelClass) async {
+    var sb = new StringBuffer();
+    sb.writeln("part of highcharts;");
+    sb.writeln("");
+    sb.write(await generateApi(topLevelClass));
+    //classesCode[dashesToCamelCase(topLevelClass)] = sb.toString();
+    var fileName = dashesToCamelCase(topLevelClass);
+    api.writeln ("part 'src/${fileName}.dart';");
+    File file = new File ('C:/Gonzalo/trabajos/dart/highcharts_api_gen_output/src/${fileName}.dart');
+    file.writeAsStringSync(sb.toString());
+  });
+
   api.writeln("");
   api.writeln("@JS('Date.UTC')");
   api.writeln("external DateTime dateUTC (year, month, day);");
@@ -145,12 +164,9 @@ main(List<String> args) async {
   api.writeln("}");
   api.writeln("");
 
+  File file = new File('C:/Gonzalo/trabajos/dart/highcharts_api_gen_output/highcharts.dart');
+  file.writeAsStringSync(api.toString());
 
-  await Future.forEach(topLevelClasses, (String topLevelClass) async {
-    api.write(await generateApi(topLevelClass));
-  });
-
-  print(api.toString());
 }
 
 String getMethodReturnType (String jsReturnType, String propertyName, bool isParent) {
