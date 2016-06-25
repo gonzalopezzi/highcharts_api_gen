@@ -1,0 +1,6 @@
+library highcharts;
+
+import 'package:uuid/uuid.dart';
+import 'dart:js';
+import 'package:js/js.dart';
+import 'dart:html';

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:core';
+import 'dart:io';
+import 'package:args/args.dart';
 
 final String baseURL = "http://api.highcharts.com/option/highcharts/child/";
 final String baseMethodsURL = "http://api.highcharts.com/object/highcharts-obj/child/";
@@ -11,6 +13,25 @@ final Map<String, String> propertyTypesDirtyFixes = {
 };
 
 main(List<String> args) async {
+
+  var parser = new ArgParser ();
+  parser.addOption('output', abbr: 'o', help:'Output directory to store generated files');
+  parser.addFlag('help', abbr:'h', help:'Show this help');
+
+  var parsedArguments = parser.parse(args);
+
+  if (parsedArguments['help']) {
+    print(parser.usage);
+    return;
+  }
+  if (parsedArguments['output'] == null) {
+    print ("Output folder must be specified");
+    print(parser.usage);
+    return;
+  }
+
+  var outputDirectory = parsedArguments['output'];
+
   List<String> topLevelClasses = ["chart", "credits", "data", "drilldown", "exporting", "labels", "legend",
                                   "loading", "navigation", "noData", "pane", "plotOptions", "series",
                                   "series<area>", "series<arearange>", "series<areaspline>",
@@ -25,132 +46,34 @@ main(List<String> args) async {
 
   StringBuffer api = new StringBuffer();
 
-  api.writeln("library highcharts.options;");
-  api.writeln("");
-  api.writeln("import 'package:uuid/uuid.dart';");
-  api.writeln("import 'dart:js';");
-  api.writeln("import 'package:js/js.dart';");
-  api.writeln("import 'dart:html';");
-  api.writeln("");
-  api.writeln("@JS('Date.UTC')");
-  api.writeln("external DateTime dateUTC (year, month, day);");
+  File libraryAndImportsTemplate = new File("bin/templates/library_and_imports.txt");
+  api.write(libraryAndImportsTemplate.readAsStringSync());
   api.writeln("");
 
+  // Creation of the "src" directory where all the dart files will be stored
+  new Directory("$outputDirectory/src/").createSync();
+
+  await Future.forEach(topLevelClasses, (String topLevelClass) async {
+    var sb = new StringBuffer();
+    sb.writeln("part of highcharts;");
+    sb.writeln("");
+    sb.write(await generateApi(topLevelClass));
+    var fileName = camelCaseToLowerCaseUnderscore(dashesToCamelCase(topLevelClass));
+    api.writeln ("part 'src/${fileName}.dart';");
+    File file = new File ('$outputDirectory/src/$fileName.dart');
+    file.writeAsStringSync(sb.toString());
+  });
+
+  api.writeln("");
   api.write(await generateHighchartsChartApi());
 
   api.writeln("");
-  api.writeln("@JS()");
-  api.writeln("@anonymous");
-  api.writeln("class OptionsObject {");
-  api.writeln("  static Uuid uidGen = new Uuid();");
-  api.writeln("  JsObject jsChart;");
-  api.writeln("}");
-  api.writeln("");
-  api.writeln("@JS()");
-  api.writeln("@anonymous");
-  api.writeln("class Axis {");
-  api.writeln("}");
-  api.writeln("");
-  api.writeln("@JS()");
-  api.writeln("@anonymous");
-  api.writeln("class ChartOptions {");
-  api.writeln("  external factory ChartOptions ();");
-  api.writeln("  ");
-  api.writeln("  external Chart get chart;");
-  api.writeln("  external void set chart (Chart a_chart);");
-  api.writeln("  ");
-  api.writeln("  external List<String> get colors;");
-  api.writeln("  external void set colors (List<String> a_colors);");
-  api.writeln("  ");
-  api.writeln("  external Credits get credits;");
-  api.writeln("  external void set credits (Credits a_credits);");
-  api.writeln("  ");
-  api.writeln("  external Data get data;");
-  api.writeln("  external void set data (Data a_data);");
-  api.writeln("  ");
-  api.writeln("  external Drilldown get drilldown;");
-  api.writeln("  external void set drilldown (Drilldown a_drilldown);");
-  api.writeln("  ");
-  api.writeln("  external Exporting get exporting;");
-  api.writeln("  external void set exporting (Exporting a_exporting);");
-  api.writeln("  ");
-  api.writeln("  external Labels get labels;");
-  api.writeln("  external void set labels (Labels a_labels);");
-  api.writeln("  ");
-  api.writeln("  external Legend get legend;");
-  api.writeln("  external void set legend (Legend a_legend);");
-  api.writeln("  ");
-  api.writeln("  external Loading get loading;");
-  api.writeln("  external void set loading (Loading a_loading);");
-  api.writeln("  ");
-  api.writeln("  external Navigation get navigation;");
-  api.writeln("  external void set navigation (Navigation a_navigation);");
-  api.writeln("  ");
-  api.writeln("  external NoData get noData;");
-  api.writeln("  external void set noData (NoData a_noData);");
-  api.writeln("  ");
-  api.writeln("  external Pane get pane;");
-  api.writeln("  external void set pane (Pane a_pane);");
-  api.writeln("  ");
-  api.writeln("  external PlotOptions get plotOptions;");
-  api.writeln("  external void set plotOptions (PlotOptions a_plotOptions);");
-  api.writeln("  ");
-  api.writeln("  external List<Series> get series;");
-  api.writeln("  external void set series (List<Series> a_series);");
-  api.writeln("  ");
-  api.writeln("  external Subtitle get subtitle;");
-  api.writeln("  external void set subtitle (Subtitle a_subtitle);");
-  api.writeln("  ");
-  api.writeln("  external Title get title;");
-  api.writeln("  external void set title (Title a_title);");
-  api.writeln("  ");
-  api.writeln("  external Tooltip get tooltip;");
-  api.writeln("  external void set tooltip (Tooltip a_tooltip);");
-  api.writeln("  ");
-  api.writeln("  external XAxis get xAxis;");
-  api.writeln("  external void set xAxis (XAxis a_xAxis);");
-  api.writeln("  ");
-  api.writeln("  external YAxis get yAxis;");
-  api.writeln("  external void set yAxis (YAxis a_yAxis);");
-  api.writeln("  ");
-  api.writeln("}");
-  api.writeln("");
-  api.writeln("@JS()");
-  api.writeln("@anonymous");
-  api.writeln("class DateTimeLabelFormats {");
-  api.writeln("  external factory DateTimeLabelFormats();");
-  api.writeln("  external String get millisecond;");
-  api.writeln("  external void set millisecond(String a_milliseconds);");
-  api.writeln("  ");
-  api.writeln("  external String get second;");
-  api.writeln("  external void set second(String a_seconds);");
-  api.writeln("  ");
-  api.writeln("  external String get minute;");
-  api.writeln("  external void set minute(String a_minute);");
-  api.writeln("  ");
-  api.writeln("  external String get hour;");
-  api.writeln("  external void set hour(String a_hour);");
-  api.writeln("  ");
-  api.writeln("  external String get day;");
-  api.writeln("  external void set day(String a_day);");
-  api.writeln("  ");
-  api.writeln("  external String get week;");
-  api.writeln("  external void set week(String a_week);");
-  api.writeln("  ");
-  api.writeln("  external String get month;");
-  api.writeln("  external void set month(String a_month);");
-  api.writeln("  ");
-  api.writeln("  external String get year;");
-  api.writeln("  external void set year(String a_year);");
-  api.writeln("}");
-  api.writeln("");
+  File hardcodedClassesTemplate = new File("bin/templates/hardcoded_classes.txt");
+  api.write(hardcodedClassesTemplate.readAsStringSync());
 
+  File file = new File('$outputDirectory/highcharts.dart');
+  file.writeAsStringSync(api.toString());
 
-  await Future.forEach(topLevelClasses, (String topLevelClass) async {
-    api.write(await generateApi(topLevelClass));
-  });
-
-  print(api.toString());
 }
 
 String getMethodReturnType (String jsReturnType, String propertyName, bool isParent) {
@@ -231,6 +154,14 @@ String dashesToCamelCase (String dashes) {
     out = out + startUpperCase(formattedDash);
   });
   return out;
+}
+
+String camelCaseToLowerCaseUnderscore (String camel) {
+  var regex = new RegExp("([a-z])([A-Z]+)");
+  String out = camel.replaceAllMapped(regex, (Match match) {
+    return "${match.group(1)}_${match.group(2)}";
+  });
+  return out.toLowerCase();
 }
 
 bool isSeriesClass (String className) {
