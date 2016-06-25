@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
+import 'package:args/args.dart';
 
 final String baseURL = "http://api.highcharts.com/option/highcharts/child/";
 final String baseMethodsURL = "http://api.highcharts.com/object/highcharts-obj/child/";
@@ -12,6 +13,25 @@ final Map<String, String> propertyTypesDirtyFixes = {
 };
 
 main(List<String> args) async {
+
+  var parser = new ArgParser ();
+  parser.addOption('output', abbr: 'o', help:'Output directory to store generated files');
+  parser.addFlag('help', abbr:'h', help:'Show this help');
+
+  var parsedArguments = parser.parse(args);
+
+  if (parsedArguments['help']) {
+    print(parser.usage);
+    return;
+  }
+  if (parsedArguments['output'] == null) {
+    print ("Output folder must be specified");
+    print(parser.usage);
+    return;
+  }
+
+  var outputDirectory = parsedArguments['output'];
+
   List<String> topLevelClasses = ["chart", "credits", "data", "drilldown", "exporting", "labels", "legend",
                                   "loading", "navigation", "noData", "pane", "plotOptions", "series",
                                   "series<area>", "series<arearange>", "series<areaspline>",
@@ -31,7 +51,7 @@ main(List<String> args) async {
   api.writeln("");
 
   // Creation of the "src" directory where all the dart files will be stored
-  new Directory("C:/Gonzalo/trabajos/dart/highcharts_api_gen_output/src/").createSync();
+  new Directory("$outputDirectory/src/").createSync();
 
   await Future.forEach(topLevelClasses, (String topLevelClass) async {
     var sb = new StringBuffer();
@@ -40,7 +60,7 @@ main(List<String> args) async {
     sb.write(await generateApi(topLevelClass));
     var fileName = camelCaseToLowerCaseUnderscore(dashesToCamelCase(topLevelClass));
     api.writeln ("part 'src/${fileName}.dart';");
-    File file = new File ('C:/Gonzalo/trabajos/dart/highcharts_api_gen_output/src/${fileName}.dart');
+    File file = new File ('$outputDirectory/src/$fileName.dart');
     file.writeAsStringSync(sb.toString());
   });
 
@@ -51,7 +71,7 @@ main(List<String> args) async {
   File hardcodedClassesTemplate = new File("bin/templates/hardcoded_classes.txt");
   api.write(hardcodedClassesTemplate.readAsStringSync());
 
-  File file = new File('C:/Gonzalo/trabajos/dart/highcharts_api_gen_output/highcharts.dart');
+  File file = new File('$outputDirectory/highcharts.dart');
   file.writeAsStringSync(api.toString());
 
 }
