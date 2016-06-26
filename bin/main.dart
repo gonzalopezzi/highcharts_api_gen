@@ -64,9 +64,7 @@ main(List<String> args) async {
     file.writeAsStringSync(sb.toString());
   });
 
-  api.writeln("");
   api.write(await generateHighchartsChartApi());
-
   api.writeln("");
   File hardcodedClassesTemplate = new File("bin/templates/hardcoded_classes.txt");
   api.write(hardcodedClassesTemplate.readAsStringSync());
