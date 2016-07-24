@@ -1,3 +1,4 @@
+@JS()
 library highcharts;
 
 import 'package:uuid/uuid.dart';
